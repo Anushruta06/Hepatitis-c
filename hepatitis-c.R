@@ -3,6 +3,7 @@ library(ggplot2)
 library(caTools)
 library(VGAM)
 library(dplyr)
+library(reshape2)
 #----setting dataset----
 
 setwd("C:/Users/aparu/OneDrive/Desktop/Hepatitis C")
@@ -12,6 +13,7 @@ data <- na.omit(raw_data)
 data <- data[ ,-c(1,4)]
 n_runs <- 1000
 acc <- numeric(n_runs)
+b_acc <- numeric(n_runs)
 f1_all <- matrix(0, nrow = n_runs, ncol = 4)
 sens_all <- matrix(0, nrow = n_runs, ncol = 4)
 spec_all <- matrix(0, nrow = n_runs, ncol = 4)
@@ -30,8 +32,9 @@ data<- data[ ,-1]
 data[,-12]<- scale(data[,-12])
 
 for(i in 1:n_runs){
+set.seed(273)
 
-split <- sample.split(data, 0.75)
+split <- sample.split(data$Category_num, SplitRatio = 0.75)
 X_tr <- subset(data, split == "TRUE")
 X_ts <- subset(data, split == "FALSE")
 
@@ -54,7 +57,7 @@ model <- vglm(Category_num ~ Age + ALB + ALT + AST + BIL + CHE + CHOL + CREA + G
 summary(model)
 
 
-model_fixed <- vglm(Category_num ~ ALB + ALT + AST + BIL +CHOL + CREA + PROT ,
+model_fixed <- vglm(Category_num ~Age+ ALB + ALT + AST + BIL +CHOL + CREA +PROT,
                     family = cumulative(parallel = TRUE),
                     data = X_tr,
                     weights = weights)
@@ -133,7 +136,9 @@ for(k in classes){
   
   sens_all[i, k+1] <- TP / (TP + FN)
   spec_all[i, k+1] <- TN / (TN + FP)
+  
 }
+
 
 
 # Accuracy
@@ -172,6 +177,12 @@ sd(acc)     # variability
 min(acc)    # worst case
 max(acc)    # best case
 
+ci_lower <- mean(acc) - 1.96 * sd(acc) / sqrt(n_runs)
+ci_upper <- mean(acc) + 1.96 * sd(acc) / sqrt(n_runs)
+
+c(ci_lower, ci_upper) #CI
+
+
 colMeans(sens_all)
 colMeans(spec_all)
 
@@ -191,3 +202,16 @@ specificity
 f1_all[i, ]
 colMeans(f1_all)
 
+balanced_acc <- rowMeans(sens_all)
+mean_balanced_acc <- mean(balanced_acc)
+cm_prop <- prop.table(cm, margin = 1)
+cm_df <- melt(cm_prop)
+colnames(cm_df) <- c("True", "Predicted", "Value")
+ggplot(cm_df, aes(x = Predicted, y = True, fill = Value)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = round(Value, 2)), size = 5) +
+  scale_fill_gradient(low = "white", high = "red") +
+  labs(title = "Confusion Matrix Heatmap",
+       x = "Predicted Class",
+       y = "True Class") +
+  theme_minimal()
