@@ -32,7 +32,7 @@ data<- data[ ,-1]
 data[,-12]<- scale(data[,-12])
 
 for(i in 1:n_runs){
-set.seed(273)
+#set.seed(216)
 
 split <- sample.split(data$Category_num, SplitRatio = 0.75)
 X_tr <- subset(data, split == "TRUE")
@@ -57,7 +57,7 @@ model <- vglm(Category_num ~ Age + ALB + ALT + AST + BIL + CHE + CHOL + CREA + G
 summary(model)
 
 
-model_fixed <- vglm(Category_num ~Age+ ALB + ALT + AST + BIL +CHOL + CREA +PROT,
+model_fixed <- vglm(Category_num ~Age+ ALB + ALT + AST + BIL + CREA + PROT + CHOL,
                     family = cumulative(parallel = TRUE),
                     data = X_tr,
                     weights = weights)
@@ -202,8 +202,7 @@ specificity
 f1_all[i, ]
 colMeans(f1_all)
 
-balanced_acc <- rowMeans(sens_all)
-mean_balanced_acc <- mean(balanced_acc)
+balanced_acc <- mean(colMeans(sens_all))
 cm_prop <- prop.table(cm, margin = 1)
 cm_df <- melt(cm_prop)
 colnames(cm_df) <- c("True", "Predicted", "Value")
@@ -215,3 +214,5 @@ ggplot(cm_df, aes(x = Predicted, y = True, fill = Value)) +
        x = "Predicted Class",
        y = "True Class") +
   theme_minimal()
+
+
