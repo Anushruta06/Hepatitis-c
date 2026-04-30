@@ -139,36 +139,37 @@ for(k in classes){
   
 }
 
+# ---- F1 SCORE CALCULATION ----
+
+for(k in classes){
+  
+  TP <- cm[as.character(k), as.character(k)]
+  
+  FN <- sum(cm[as.character(k), ]) - TP
+  FP <- sum(cm[, as.character(k)]) - TP
+  TN <- sum(cm) - TP - FN - FP
+  
+  # Recall (Sensitivity)
+  recall <- ifelse((TP + FN) == 0, 0, TP / (TP + FN))
+  sens_all[i, k+1] <- recall
+  
+  # Specificity
+  spec_all[i, k+1] <- ifelse((TN + FP) == 0, 0, TN / (TN + FP))
+  
+  # Precision
+  precision <- ifelse((TP + FP) == 0, 0, TP / (TP + FP))
+  
+  # F1-score
+  f1_all[i, k+1] <- ifelse((precision + recall) == 0, 0,
+                           2 * precision * recall / (precision + recall))
+}
+
+
 
 
 # Accuracy
 acc[i] <- mean(pred_test == X_ts$Category_num)
 
-# ---- F1 SCORE CALCULATION ----
-
-f1_per_class <- numeric(length(classes))
-
-for (k in classes) {
-  
-  TP <- cm[as.character(k), as.character(k)]
-  FN <- sum(cm[as.character(k), ]) - TP
-  FP <- sum(cm[, as.character(k)]) - TP
-  
-  precision <- ifelse((TP + FP) == 0, 0, TP / (TP + FP))
-  recall    <- ifelse((TP + FN) == 0, 0, TP / (TP + FN))
-  
-  f1_per_class[k + 1] <- ifelse(
-    (precision + recall) == 0,
-    0,
-    2 * precision * recall / (precision + recall)
-  )
-}
-
-# store per run (optional but recommended)
-# you should create this before loop:
-# f1_all <- matrix(0, nrow = n_runs, ncol = 4)
-
-f1_all[i, ] <- f1_per_class
 }
 
 # Results
@@ -214,5 +215,23 @@ ggplot(cm_df, aes(x = Predicted, y = True, fill = Value)) +
        x = "Predicted Class",
        y = "True Class") +
   theme_minimal()
+#----Fscore----
 
+class_counts <- table(X_ts$Category_num)
+wts <- class_counts / sum(class_counts)
+f1_weighted <- f1_all %*% wts
+mean(f1_weighted)
+mean(rowMeans(f1_all))
+
+
+
+
+# library(MASS)
+# 
+# model_polr <- polr(factor(Category_num) ~ Age + ALB + ALT + AST + BIL + CREA + PROT + CHOL,
+#                    data = X_tr,
+#                    method = "logistic")
+# library(brant)
+# 
+# brant(model_polr)
 
